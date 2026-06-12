@@ -4,16 +4,25 @@
 
 bool neuronios[3] = {false, false, false};
 
+// animação do sinal
+struct Sinal {
+    bool ativo = false;
+    float progresso = 0.0f; // 0.0 = inicio, 1.0 = fim
+    float x1, y1, x2, y2;  // de onde pra onde
+};
+
+Sinal sinais[2]; // sinal A→B e sinal B→C
+
 void configurarLuz() {
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
     glEnable(GL_COLOR_MATERIAL);
     glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 
-    GLfloat luzPosicao[]  = { 2.0f, 2.0f, 3.0f, 1.0f };
-    GLfloat luzAmbiente[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-    GLfloat luzDifusa[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
-    GLfloat luzEspecular[]= { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat luzPosicao[]   = { 2.0f, 2.0f, 3.0f, 1.0f };
+    GLfloat luzAmbiente[]  = { 0.2f, 0.2f, 0.2f, 1.0f };
+    GLfloat luzDifusa[]    = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat luzEspecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
     glLightfv(GL_LIGHT0, GL_POSITION, luzPosicao);
     glLightfv(GL_LIGHT0, GL_AMBIENT,  luzAmbiente);
@@ -26,7 +35,7 @@ void configurarLuz() {
 }
 
 void desenharTexto(float x, float y, float z, const char* texto) {
-    glDisable(GL_LIGHTING); // texto não recebe luz
+    glDisable(GL_LIGHTING);
     glColor3f(1.0f, 1.0f, 1.0f);
     glRasterPos3f(x, y, z);
     while (*texto)
@@ -37,12 +46,10 @@ void desenharTexto(float x, float y, float z, const char* texto) {
 void desenharEsfera(float x, float y, float z, bool ativo) {
     glPushMatrix();
     glTranslatef(x, y, z);
-
     if (ativo)
-        glColor3f(1.0f, 1.0f, 0.0f); // amarelo
+        glColor3f(1.0f, 1.0f, 0.0f);
     else
-        glColor3f(0.3f, 0.3f, 0.9f); // azul
-
+        glColor3f(0.3f, 0.3f, 0.9f);
     glutSolidSphere(0.15, 32, 32);
     glPopMatrix();
 }
@@ -56,6 +63,35 @@ void desenharConexao(float x1, float y1, float x2, float y2) {
         glVertex3f(x2, y2, 0.0f);
     glEnd();
     glEnable(GL_LIGHTING);
+}
+
+void desenharSinais() {
+    glDisable(GL_LIGHTING);
+    for (int i = 0; i < 2; i++) {
+        if (!sinais[i].ativo) continue;
+        float x = sinais[i].x1 + (sinais[i].x2 - sinais[i].x1) * sinais[i].progresso;
+        float y = sinais[i].y1 + (sinais[i].y2 - sinais[i].y1) * sinais[i].progresso;
+
+        glColor3f(0.0f, 1.0f, 1.0f); // ciano
+        glPointSize(10.0f);
+        glBegin(GL_POINTS);
+            glVertex3f(x, y, 0.0f);
+        glEnd();
+    }
+    glEnable(GL_LIGHTING);
+}
+
+void atualizar(int valor) {
+    for (int i = 0; i < 2; i++) {
+        if (!sinais[i].ativo) continue;
+        sinais[i].progresso += 0.05f;
+        if (sinais[i].progresso >= 1.0f) {
+            sinais[i].ativo = false;
+            sinais[i].progresso = 0.0f;
+        }
+    }
+    glutPostRedisplay();
+    glutTimerFunc(30, atualizar, 0); // 30ms ~ 33fps
 }
 
 void display() {
@@ -73,6 +109,8 @@ void display() {
     desenharEsfera(-0.6f, 0.0f, 0.0f, neuronios[0]);
     desenharEsfera( 0.0f, 0.0f, 0.0f, neuronios[1]);
     desenharEsfera( 0.6f, 0.0f, 0.0f, neuronios[2]);
+
+    desenharSinais();
 
     desenharTexto(-0.63f, 0.22f, 0.0f, "A");
     desenharTexto(-0.03f, 0.22f, 0.0f, "B");
@@ -95,12 +133,24 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
     glLoadIdentity();
     gluPerspective(45.0, (double)w/h, 0.1, 100.0);
 
+    // posição dos sinais
+    sinais[0] = {false, 0.0f, -0.6f, 0.0f, 0.0f, 0.0f}; // A→B
+    sinais[1] = {false, 0.0f,  0.0f, 0.0f, 0.6f, 0.0f}; // B→C
+
     glutDisplayFunc(display);
+    glutTimerFunc(30, atualizar, 0);
     glutMainLoop();
 }
 
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio(JNIEnv*, jobject, jint id, jboolean ativo) {
     if (id >= 0 && id < 3)
         neuronios[id] = ativo;
+
+    // dispara sinal na conexão correspondente
+    if (ativo && id < 2) {
+        sinais[id].ativo = true;
+        sinais[id].progresso = 0.0f;
+    }
+
     glutPostRedisplay();
 }
