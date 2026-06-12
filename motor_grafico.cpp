@@ -5,11 +5,18 @@
 // estado dos neurônios
 bool neuronios[3] = {false, false, false};
 
+void desenharTexto(float x, float y, const char* texto) {
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glRasterPos2f(x, y);
+    while (*texto)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *texto++);
+}
+
 void desenharCirculo(float x, float y, float raio, bool ativo) {
     if (ativo)
-        glColor3f(1.0f, 1.0f, 0.0f); // amarelo = disparando
+        glColor3f(1.0f, 1.0f, 0.0f);
     else
-        glColor3f(0.3f, 0.3f, 0.8f); // azul = inativo
+        glColor3f(0.3f, 0.3f, 0.8f);
 
     glBegin(GL_TRIANGLE_FAN);
     glVertex2f(x, y);
@@ -23,22 +30,23 @@ void desenharCirculo(float x, float y, float raio, bool ativo) {
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // conexões
     glColor3f(1.0f, 1.0f, 1.0f);
     glBegin(GL_LINES);
         glVertex2f(-0.5f, 0.0f); glVertex2f(-0.1f, 0.0f);
         glVertex2f(0.1f, 0.0f);  glVertex2f(0.5f, 0.0f);
     glEnd();
 
-    // neurônios A, B, C
     desenharCirculo(-0.6f, 0.0f, 0.1f, neuronios[0]);
     desenharCirculo( 0.0f, 0.0f, 0.1f, neuronios[1]);
     desenharCirculo( 0.6f, 0.0f, 0.1f, neuronios[2]);
 
+    desenharTexto(-0.63f, 0.15f, "A");
+    desenharTexto(-0.03f, 0.15f, "B");
+    desenharTexto( 0.57f, 0.15f, "C");
+
     glFlush();
 }
 
-// JNI — inicializa a janela
 JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, jint h) {
     int argc = 0;
     glutInit(&argc, nullptr);
@@ -48,7 +56,6 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
     glutMainLoop();
 }
 
-// JNI — atualiza estado do neurônio
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio(JNIEnv*, jobject, jint id, jboolean ativo) {
     if (id >= 0 && id < 3)
         neuronios[id] = ativo;

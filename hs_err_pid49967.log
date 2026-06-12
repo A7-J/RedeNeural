@@ -1,0 +1,55 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x0000789d0c95fe2f, pid=49967, tid=49973
+#
+# JRE version: OpenJDK Runtime Environment (21.0.11+10) (build 21.0.11+10-1-24.04.2-Ubuntu)
+# Java VM: OpenJDK 64-Bit Server VM (21.0.11+10-1-24.04.2-Ubuntu, mixed mode, sharing, tiered, compressed oops, compressed class ptrs, g1 gc, linux-amd64)
+# Problematic frame:
+# C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x55fe2f]
+#
+# Core dump will be written. Default location: Core dumps may be processed with "/usr/lib/systemd/systemd-coredump %P %u %g %s %t 9223372036854775808 %h %d" (or dumping to /home/arthur/Documentos/RedeNeural/RedeNeural/core.49967)
+#
+# If you would like to submit a bug report, please visit:
+#   https://bugs.launchpad.net/ubuntu/+source/openjdk-21
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: -Djava.library.path=. Main
+
+Host: Intel(R) Pentium(R) CPU B970 @ 2.30GHz, 2 cores, 3G, Linux Mint 22.3 Zena
+Time: Fri Jun 12 00:55:41 2026 -04 elapsed time: 4.460527 seconds (0d 0h 0m 4s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x0000789d880195e0):  JavaThread "main"             [_thread_in_native, id=49973, stack(0x0000789d8f100000,0x0000789d8f200000) (1024K)]
+
+Stack: [0x0000789d8f100000,0x0000789d8f200000],  sp=0x0000789d8f1fd9f0,  free space=1014k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x55fe2f]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x697108]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x6069e7]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x40f0c4]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x1af15b]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x1b0081]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x1b07cf]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x1b09a1]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x329988]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x1466c5]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x146cc3]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x146eed]
+C  [libgallium-25.2.8-0ubuntu0.24.04.1.so+0x1b55c0]
+C  [libmotor_grafico.so+0x14a6]  display()+0x3b
+C  [libglut.so.3.12+0x1cfb3]  fghRedrawWindow+0x43
+C  [libglut.so.3.12+0x28099]
+C  [libglut.so.3.12+0x275c9]  fgEnumWindows+0x49
+C  [libglut.so.3.12+0x27888]  glutMainLoopEvent+0xc8
+C  [libglut.so.3.12+0x27924]  glutMainLoop+0x54
+C  [libmotor_grafico.so+0x15f2]  Java_MotorGrafico_inicializar+0x73
+j  MotorGrafico.inicializar(II)V+0
+j  Main.main([Ljava/lang/String;)V+82
+v  ~StubRoutines::call_stub 0x0000789d77d38cc4
+V  [libjvm.so+0x91456a]  JavaCalls::call_helper(JavaValue*, methodHandle const&, JavaCallArguments*, JavaThread*)+0x2da
