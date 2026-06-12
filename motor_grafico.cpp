@@ -3,8 +3,15 @@
 #include <cmath>
 #include <string>
 
-bool neuronios[3] = {false, false, false};
-int contadores[3] = {0, 0, 0};
+#define NUM_NEURONIOS 6
+
+bool neuronios[NUM_NEURONIOS] = {false};
+int contadores[NUM_NEURONIOS] = {0};
+
+// posições das esferas por camada
+float posX[] = {-0.8f, -0.8f,  0.0f,  0.0f,  0.8f,  0.8f};
+float posY[] = { 0.3f, -0.3f,  0.3f, -0.3f,  0.3f, -0.3f};
+const char* nomes[] = {"A", "B", "C", "D", "E", "F"};
 
 // câmera
 float anguloX = 0.0f;
@@ -12,13 +19,36 @@ float anguloY = 0.0f;
 int mouseX, mouseY;
 bool mousePressionado = false;
 
-// sinais
+// sinais — uma conexão por par
 struct Sinal {
     bool ativo = false;
     float progresso = 0.0f;
     float x1, y1, x2, y2;
 };
-Sinal sinais[2];
+
+// A→C, A→D, B→C, B→D, C→E, C→F, D→E, D→F
+Sinal sinais[8];
+
+void inicializarSinais() {
+    sinais[0] = {false, 0.0f, posX[0], posY[0], posX[2], posY[2]}; // A→C
+    sinais[1] = {false, 0.0f, posX[0], posY[0], posX[3], posY[3]}; // A→D
+    sinais[2] = {false, 0.0f, posX[1], posY[1], posX[2], posY[2]}; // B→C
+    sinais[3] = {false, 0.0f, posX[1], posY[1], posX[3], posY[3]}; // B→D
+    sinais[4] = {false, 0.0f, posX[2], posY[2], posX[4], posY[4]}; // C→E
+    sinais[5] = {false, 0.0f, posX[2], posY[2], posX[5], posY[5]}; // C→F
+    sinais[6] = {false, 0.0f, posX[3], posY[3], posX[4], posY[4]}; // D→E
+    sinais[7] = {false, 0.0f, posX[3], posY[3], posX[5], posY[5]}; // D→F
+}
+
+// mapa: qual neurônio dispara → quais sinais ativar
+int sinalPorNeuronio[6][2] = {
+    {0, 1}, // A → sinais 0,1
+    {2, 3}, // B → sinais 2,3
+    {4, 5}, // C → sinais 4,5
+    {6, 7}, // D → sinais 6,7
+    {-1,-1},// E → saída, sem sinais
+    {-1,-1} // F → saída, sem sinais
+};
 
 void configurarLuz() {
     glEnable(GL_LIGHTING);
@@ -41,15 +71,6 @@ void configurarLuz() {
     glMateriali(GL_FRONT, GL_SHININESS, 80);
 }
 
-void desenharTexto2D(float x, float y, const char* texto) {
-    glDisable(GL_LIGHTING);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glRasterPos2f(x, y);
-    while (*texto)
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *texto++);
-    glEnable(GL_LIGHTING);
-}
-
 void desenharTexto(float x, float y, float z, const char* texto) {
     glDisable(GL_LIGHTING);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -59,36 +80,42 @@ void desenharTexto(float x, float y, float z, const char* texto) {
     glEnable(GL_LIGHTING);
 }
 
-void desenharEsfera(float x, float y, float z, bool ativo) {
+void desenharEsfera(int id) {
     glPushMatrix();
-    glTranslatef(x, y, z);
-    if (ativo)
-        glColor3f(1.0f, 1.0f, 0.0f);
+    glTranslatef(posX[id], posY[id], 0.0f);
+    if (neuronios[id])
+        glColor3f(1.0f, 1.0f, 0.0f); // amarelo
+    else if (id < 2)
+        glColor3f(0.9f, 0.3f, 0.3f); // vermelho = entrada
+    else if (id < 4)
+        glColor3f(0.3f, 0.9f, 0.3f); // verde = oculta
     else
-        glColor3f(0.3f, 0.3f, 0.9f);
-    glutSolidSphere(0.15, 32, 32);
+        glColor3f(0.3f, 0.3f, 0.9f); // azul = saída
+    glutSolidSphere(0.12, 32, 32);
     glPopMatrix();
 }
 
-void desenharConexao(float x1, float y1, float x2, float y2) {
+void desenharConexoes() {
     glDisable(GL_LIGHTING);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glLineWidth(2.0f);
-    glBegin(GL_LINES);
-        glVertex3f(x1, y1, 0.0f);
-        glVertex3f(x2, y2, 0.0f);
-    glEnd();
+    glColor3f(0.5f, 0.5f, 0.5f);
+    glLineWidth(1.5f);
+    for (int i = 0; i < 8; i++) {
+        glBegin(GL_LINES);
+            glVertex3f(sinais[i].x1, sinais[i].y1, 0.0f);
+            glVertex3f(sinais[i].x2, sinais[i].y2, 0.0f);
+        glEnd();
+    }
     glEnable(GL_LIGHTING);
 }
 
 void desenharSinais() {
     glDisable(GL_LIGHTING);
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 8; i++) {
         if (!sinais[i].ativo) continue;
         float x = sinais[i].x1 + (sinais[i].x2 - sinais[i].x1) * sinais[i].progresso;
         float y = sinais[i].y1 + (sinais[i].y2 - sinais[i].y1) * sinais[i].progresso;
         glColor3f(0.0f, 1.0f, 1.0f);
-        glPointSize(10.0f);
+        glPointSize(8.0f);
         glBegin(GL_POINTS);
             glVertex3f(x, y, 0.0f);
         glEnd();
@@ -97,11 +124,10 @@ void desenharSinais() {
 }
 
 void desenharContadores() {
-    // muda pra projeção 2D pra desenhar o HUD
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    gluOrtho2D(0, 600, 0, 400);
+    gluOrtho2D(0, 700, 0, 500);
 
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
@@ -112,17 +138,32 @@ void desenharContadores() {
 
     // título
     glColor3f(0.0f, 1.0f, 1.0f);
-    glRasterPos2f(10, 380);
+    glRasterPos2f(10, 480);
     const char* titulo = "Disparos:";
     while (*titulo)
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *titulo++);
 
-    // contadores A, B, C
-    const char* nomes[] = {"A: ", "B: ", "C: "};
-    for (int i = 0; i < 3; i++) {
-        std::string linha = nomes[i] + std::to_string(contadores[i]);
+    // legenda camadas
+    glColor3f(0.9f, 0.3f, 0.3f);
+    glRasterPos2f(10, 460);
+    const char* l1 = "Entrada: A B";
+    while (*l1) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *l1++);
+
+    glColor3f(0.3f, 0.9f, 0.3f);
+    glRasterPos2f(10, 445);
+    const char* l2 = "Oculta:  C D";
+    while (*l2) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *l2++);
+
+    glColor3f(0.3f, 0.3f, 0.9f);
+    glRasterPos2f(10, 430);
+    const char* l3 = "Saida:   E F";
+    while (*l3) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *l3++);
+
+    // contadores
+    for (int i = 0; i < NUM_NEURONIOS; i++) {
+        std::string linha = std::string(nomes[i]) + ": " + std::to_string(contadores[i]);
         glColor3f(1.0f, 1.0f, 1.0f);
-        glRasterPos2f(10, 360 - i * 20);
+        glRasterPos2f(10, 405 - i * 18);
         for (char c : linha)
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
     }
@@ -137,9 +178,9 @@ void desenharContadores() {
 }
 
 void atualizar(int valor) {
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 8; i++) {
         if (!sinais[i].ativo) continue;
-        sinais[i].progresso += 0.05f;
+        sinais[i].progresso += 0.04f;
         if (sinais[i].progresso >= 1.0f) {
             sinais[i].ativo = false;
             sinais[i].progresso = 0.0f;
@@ -159,22 +200,17 @@ void display() {
     glRotatef(anguloY, 0.0f, 1.0f, 0.0f);
 
     configurarLuz();
+    desenharConexoes();
 
-    desenharConexao(-0.6f, 0.0f, 0.0f, 0.0f);
-    desenharConexao( 0.0f, 0.0f, 0.6f, 0.0f);
-
-    desenharEsfera(-0.6f, 0.0f, 0.0f, neuronios[0]);
-    desenharEsfera( 0.0f, 0.0f, 0.0f, neuronios[1]);
-    desenharEsfera( 0.6f, 0.0f, 0.0f, neuronios[2]);
+    for (int i = 0; i < NUM_NEURONIOS; i++)
+        desenharEsfera(i);
 
     desenharSinais();
 
-    desenharTexto(-0.63f, 0.22f, 0.0f, "A");
-    desenharTexto(-0.03f, 0.22f, 0.0f, "B");
-    desenharTexto( 0.57f, 0.22f, 0.0f, "C");
+    for (int i = 0; i < NUM_NEURONIOS; i++)
+        desenharTexto(posX[i] - 0.03f, posY[i] + 0.17f, 0.0f, nomes[i]);
 
     desenharContadores();
-
     glutSwapBuffers();
 }
 
@@ -209,8 +245,7 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
     glLoadIdentity();
     gluPerspective(45.0, (double)w/h, 0.1, 100.0);
 
-    sinais[0] = {false, 0.0f, -0.6f, 0.0f, 0.0f, 0.0f};
-    sinais[1] = {false, 0.0f,  0.0f, 0.0f, 0.6f, 0.0f};
+    inicializarSinais();
 
     glutDisplayFunc(display);
     glutMouseFunc(mouseClick);
@@ -220,17 +255,23 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
 }
 
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio(JNIEnv*, jobject, jint id, jboolean ativo) {
-    if (id >= 0 && id < 3)
+    if (id >= 0 && id < NUM_NEURONIOS)
         neuronios[id] = ativo;
-    if (ativo && id < 2) {
-        sinais[id].ativo = true;
-        sinais[id].progresso = 0.0f;
+
+    if (ativo && id < NUM_NEURONIOS) {
+        for (int s = 0; s < 2; s++) {
+            int idx = sinalPorNeuronio[id][s];
+            if (idx >= 0) {
+                sinais[idx].ativo = true;
+                sinais[idx].progresso = 0.0f;
+            }
+        }
     }
     glutPostRedisplay();
 }
 
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarContador(JNIEnv*, jobject, jint id, jint valor) {
-    if (id >= 0 && id < 3)
+    if (id >= 0 && id < NUM_NEURONIOS)
         contadores[id] = valor;
     glutPostRedisplay();
 }

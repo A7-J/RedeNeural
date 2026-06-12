@@ -1,30 +1,47 @@
 public class Main {
     public static void main(String[] args) {
-        Neuronio n1 = new Neuronio("A", 0);
-        Neuronio n2 = new Neuronio("B", 1);
-        Neuronio n3 = new Neuronio("C", 2);
+        // Camada de entrada
+        Neuronio a = new Neuronio("A", 0);
+        Neuronio b = new Neuronio("B", 1);
 
-        n1.conectar(n2);
-        n2.conectar(n3);
+        // Camada oculta
+        Neuronio c = new Neuronio("C", 2);
+        Neuronio d = new Neuronio("D", 3);
+
+        // Camada de saída
+        Neuronio e = new Neuronio("E", 4);
+        Neuronio f = new Neuronio("F", 5);
+
+        // conexões entrada → oculta
+        a.conectar(c);
+        a.conectar(d);
+        b.conectar(c);
+        b.conectar(d);
+
+        // conexões oculta → saída
+        c.conectar(e);
+        c.conectar(f);
+        d.conectar(e);
+        d.conectar(f);
 
         MotorGrafico motor = new MotorGrafico();
         Neuronio.setMotor(motor);
 
-        // estimula em thread separada pra não travar a janela
         new Thread(() -> {
             try {
                 Thread.sleep(1000);
-                n1.receberEstimulo(0.4);
-                Thread.sleep(500);
-                n1.receberEstimulo(0.4); // A dispara
-                Thread.sleep(500);
-                n2.receberEstimulo(0.4); // B dispara
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                a.receberEstimulo(0.4);
+                Thread.sleep(300);
+                a.receberEstimulo(0.4); // A dispara
+                Thread.sleep(600);
+                b.receberEstimulo(0.4);
+                Thread.sleep(300);
+                b.receberEstimulo(0.4); // B dispara
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
             }
         }).start();
 
-        // abre a janela (bloqueia aqui)
-        motor.inicializar(600, 400);
+        motor.inicializar(700, 500);
     }
 }
