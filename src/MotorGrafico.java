@@ -1,0 +1,8 @@
+public class MotorGrafico {
+    static {
+        System.loadLibrary("motor_grafico");
+    }
+
+    public native void inicializar(int largura, int altura);
+    public native void atualizarNeuronio(int id, boolean ativo);
+}
