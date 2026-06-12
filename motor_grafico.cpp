@@ -4,14 +4,19 @@
 
 bool neuronios[3] = {false, false, false};
 
-// animação do sinal
+// câmera
+float anguloX = 0.0f;
+float anguloY = 0.0f;
+int mouseX, mouseY;
+bool mousePressionado = false;
+
+// sinais
 struct Sinal {
     bool ativo = false;
-    float progresso = 0.0f; // 0.0 = inicio, 1.0 = fim
-    float x1, y1, x2, y2;  // de onde pra onde
+    float progresso = 0.0f;
+    float x1, y1, x2, y2;
 };
-
-Sinal sinais[2]; // sinal A→B e sinal B→C
+Sinal sinais[2];
 
 void configurarLuz() {
     glEnable(GL_LIGHTING);
@@ -71,8 +76,7 @@ void desenharSinais() {
         if (!sinais[i].ativo) continue;
         float x = sinais[i].x1 + (sinais[i].x2 - sinais[i].x1) * sinais[i].progresso;
         float y = sinais[i].y1 + (sinais[i].y2 - sinais[i].y1) * sinais[i].progresso;
-
-        glColor3f(0.0f, 1.0f, 1.0f); // ciano
+        glColor3f(0.0f, 1.0f, 1.0f);
         glPointSize(10.0f);
         glBegin(GL_POINTS);
             glVertex3f(x, y, 0.0f);
@@ -91,7 +95,7 @@ void atualizar(int valor) {
         }
     }
     glutPostRedisplay();
-    glutTimerFunc(30, atualizar, 0); // 30ms ~ 33fps
+    glutTimerFunc(30, atualizar, 0);
 }
 
 void display() {
@@ -100,6 +104,10 @@ void display() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
+
+    // rotação pela câmera
+    glRotatef(anguloX, 1.0f, 0.0f, 0.0f);
+    glRotatef(anguloY, 0.0f, 1.0f, 0.0f);
 
     configurarLuz();
 
@@ -119,6 +127,25 @@ void display() {
     glutSwapBuffers();
 }
 
+// mouse pressionado
+void mouseClick(int botao, int estado, int x, int y) {
+    if (botao == GLUT_LEFT_BUTTON) {
+        mousePressionado = (estado == GLUT_DOWN);
+        mouseX = x;
+        mouseY = y;
+    }
+}
+
+// mouse movendo com botão pressionado
+void mouseMove(int x, int y) {
+    if (!mousePressionado) return;
+    anguloY += (x - mouseX) * 0.5f;
+    anguloX += (y - mouseY) * 0.5f;
+    mouseX = x;
+    mouseY = y;
+    glutPostRedisplay();
+}
+
 JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, jint h) {
     int argc = 0;
     glutInit(&argc, nullptr);
@@ -133,11 +160,12 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
     glLoadIdentity();
     gluPerspective(45.0, (double)w/h, 0.1, 100.0);
 
-    // posição dos sinais
-    sinais[0] = {false, 0.0f, -0.6f, 0.0f, 0.0f, 0.0f}; // A→B
-    sinais[1] = {false, 0.0f,  0.0f, 0.0f, 0.6f, 0.0f}; // B→C
+    sinais[0] = {false, 0.0f, -0.6f, 0.0f, 0.0f, 0.0f};
+    sinais[1] = {false, 0.0f,  0.0f, 0.0f, 0.6f, 0.0f};
 
     glutDisplayFunc(display);
+    glutMouseFunc(mouseClick);
+    glutMotionFunc(mouseMove);
     glutTimerFunc(30, atualizar, 0);
     glutMainLoop();
 }
@@ -145,12 +173,9 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio(JNIEnv*, jobject, jint id, jboolean ativo) {
     if (id >= 0 && id < 3)
         neuronios[id] = ativo;
-
-    // dispara sinal na conexão correspondente
     if (ativo && id < 2) {
         sinais[id].ativo = true;
         sinais[id].progresso = 0.0f;
     }
-
     glutPostRedisplay();
 }
