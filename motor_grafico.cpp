@@ -4,11 +4,34 @@
 
 bool neuronios[3] = {false, false, false};
 
+void configurarLuz() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_COLOR_MATERIAL);
+    glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+
+    GLfloat luzPosicao[]  = { 2.0f, 2.0f, 3.0f, 1.0f };
+    GLfloat luzAmbiente[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    GLfloat luzDifusa[]   = { 1.0f, 1.0f, 1.0f, 1.0f };
+    GLfloat luzEspecular[]= { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    glLightfv(GL_LIGHT0, GL_POSITION, luzPosicao);
+    glLightfv(GL_LIGHT0, GL_AMBIENT,  luzAmbiente);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE,  luzDifusa);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, luzEspecular);
+
+    GLfloat especular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glMaterialfv(GL_FRONT, GL_SPECULAR, especular);
+    glMateriali(GL_FRONT, GL_SHININESS, 80);
+}
+
 void desenharTexto(float x, float y, float z, const char* texto) {
+    glDisable(GL_LIGHTING); // texto não recebe luz
     glColor3f(1.0f, 1.0f, 1.0f);
     glRasterPos3f(x, y, z);
     while (*texto)
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *texto++);
+    glEnable(GL_LIGHTING);
 }
 
 void desenharEsfera(float x, float y, float z, bool ativo) {
@@ -25,12 +48,14 @@ void desenharEsfera(float x, float y, float z, bool ativo) {
 }
 
 void desenharConexao(float x1, float y1, float x2, float y2) {
+    glDisable(GL_LIGHTING);
     glColor3f(1.0f, 1.0f, 1.0f);
     glLineWidth(2.0f);
     glBegin(GL_LINES);
         glVertex3f(x1, y1, 0.0f);
         glVertex3f(x2, y2, 0.0f);
     glEnd();
+    glEnable(GL_LIGHTING);
 }
 
 void display() {
@@ -38,23 +63,20 @@ void display() {
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    gluLookAt(0, 0, 3,   // posição da câmera
-              0, 0, 0,   // olhando pra origem
-              0, 1, 0);  // eixo up
+    gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
 
-    // conexões
+    configurarLuz();
+
     desenharConexao(-0.6f, 0.0f, 0.0f, 0.0f);
     desenharConexao( 0.0f, 0.0f, 0.6f, 0.0f);
 
-    // esferas
     desenharEsfera(-0.6f, 0.0f, 0.0f, neuronios[0]);
     desenharEsfera( 0.0f, 0.0f, 0.0f, neuronios[1]);
     desenharEsfera( 0.6f, 0.0f, 0.0f, neuronios[2]);
 
-    // labels
-    desenharTexto(-0.63f, 0.2f, 0.0f, "A");
-    desenharTexto(-0.03f, 0.2f, 0.0f, "B");
-    desenharTexto( 0.57f, 0.2f, 0.0f, "C");
+    desenharTexto(-0.63f, 0.22f, 0.0f, "A");
+    desenharTexto(-0.03f, 0.22f, 0.0f, "B");
+    desenharTexto( 0.57f, 0.22f, 0.0f, "C");
 
     glutSwapBuffers();
 }
@@ -67,6 +89,7 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
     glutCreateWindow("Rede Neural 3D - RedeNeural");
 
     glEnable(GL_DEPTH_TEST);
+    glShadeModel(GL_SMOOTH);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
