@@ -23,6 +23,14 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio
   (JNIEnv *, jobject, jint, jboolean);
 
+/*
+ * Class:     MotorGrafico
+ * Method:    atualizarContador
+ * Signature: (II)V
+ */
+JNIEXPORT void JNICALL Java_MotorGrafico_atualizarContador
+  (JNIEnv *, jobject, jint, jint);
+
 #ifdef __cplusplus
 }
 #endif

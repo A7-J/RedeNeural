@@ -1,8 +1,10 @@
 #include "MotorGrafico.h"
 #include <GL/glut.h>
 #include <cmath>
+#include <string>
 
 bool neuronios[3] = {false, false, false};
+int contadores[3] = {0, 0, 0};
 
 // câmera
 float anguloX = 0.0f;
@@ -37,6 +39,15 @@ void configurarLuz() {
     GLfloat especular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
     glMaterialfv(GL_FRONT, GL_SPECULAR, especular);
     glMateriali(GL_FRONT, GL_SHININESS, 80);
+}
+
+void desenharTexto2D(float x, float y, const char* texto) {
+    glDisable(GL_LIGHTING);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glRasterPos2f(x, y);
+    while (*texto)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *texto++);
+    glEnable(GL_LIGHTING);
 }
 
 void desenharTexto(float x, float y, float z, const char* texto) {
@@ -85,6 +96,46 @@ void desenharSinais() {
     glEnable(GL_LIGHTING);
 }
 
+void desenharContadores() {
+    // muda pra projeção 2D pra desenhar o HUD
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, 600, 0, 400);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+
+    // título
+    glColor3f(0.0f, 1.0f, 1.0f);
+    glRasterPos2f(10, 380);
+    const char* titulo = "Disparos:";
+    while (*titulo)
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *titulo++);
+
+    // contadores A, B, C
+    const char* nomes[] = {"A: ", "B: ", "C: "};
+    for (int i = 0; i < 3; i++) {
+        std::string linha = nomes[i] + std::to_string(contadores[i]);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glRasterPos2f(10, 360 - i * 20);
+        for (char c : linha)
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+    }
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+}
+
 void atualizar(int valor) {
     for (int i = 0; i < 2; i++) {
         if (!sinais[i].ativo) continue;
@@ -104,8 +155,6 @@ void display() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
-
-    // rotação pela câmera
     glRotatef(anguloX, 1.0f, 0.0f, 0.0f);
     glRotatef(anguloY, 0.0f, 1.0f, 0.0f);
 
@@ -124,10 +173,11 @@ void display() {
     desenharTexto(-0.03f, 0.22f, 0.0f, "B");
     desenharTexto( 0.57f, 0.22f, 0.0f, "C");
 
+    desenharContadores();
+
     glutSwapBuffers();
 }
 
-// mouse pressionado
 void mouseClick(int botao, int estado, int x, int y) {
     if (botao == GLUT_LEFT_BUTTON) {
         mousePressionado = (estado == GLUT_DOWN);
@@ -136,7 +186,6 @@ void mouseClick(int botao, int estado, int x, int y) {
     }
 }
 
-// mouse movendo com botão pressionado
 void mouseMove(int x, int y) {
     if (!mousePressionado) return;
     anguloY += (x - mouseX) * 0.5f;
@@ -177,5 +226,11 @@ JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio(JNIEnv*, jobject, jin
         sinais[id].ativo = true;
         sinais[id].progresso = 0.0f;
     }
+    glutPostRedisplay();
+}
+
+JNIEXPORT void JNICALL Java_MotorGrafico_atualizarContador(JNIEnv*, jobject, jint id, jint valor) {
+    if (id >= 0 && id < 3)
+        contadores[id] = valor;
     glutPostRedisplay();
 }
