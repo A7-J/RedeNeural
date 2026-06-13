@@ -2,8 +2,10 @@
 #include <GL/glut.h>
 #include <cmath>
 #include <string>
+#include <cstdlib>
 
 #define NUM_NEURONIOS 6
+#define NUM_ESTRELAS 200
 
 bool neuronios[NUM_NEURONIOS] = {false};
 int contadores[NUM_NEURONIOS] = {0};
@@ -34,6 +36,35 @@ Sinal sinais[8];
 int sinalPorNeuronio[6][2] = {
     {0, 1}, {2, 3}, {4, 5}, {6, 7}, {-1,-1}, {-1,-1}
 };
+
+// estrelas
+struct Estrela {
+    float x, y, z, brilho;
+};
+Estrela estrelas[NUM_ESTRELAS];
+
+void inicializarEstrelas() {
+    srand(42);
+    for (int i = 0; i < NUM_ESTRELAS; i++) {
+        estrelas[i].x = ((rand() % 2000) - 1000) / 500.0f;
+        estrelas[i].y = ((rand() % 2000) - 1000) / 500.0f;
+        estrelas[i].z = ((rand() % 2000) - 1000) / 500.0f - 2.0f;
+        estrelas[i].brilho = (rand() % 100) / 100.0f;
+    }
+}
+
+void desenharEstrelas() {
+    glDisable(GL_LIGHTING);
+    glPointSize(1.5f);
+    glBegin(GL_POINTS);
+    for (int i = 0; i < NUM_ESTRELAS; i++) {
+        float b = estrelas[i].brilho;
+        glColor3f(b, b, b);
+        glVertex3f(estrelas[i].x, estrelas[i].y, estrelas[i].z);
+    }
+    glEnd();
+    glEnable(GL_LIGHTING);
+}
 
 void inicializarSinais() {
     sinais[0] = {false, 0.0f, posX[0], posY[0], posX[2], posY[2]};
@@ -132,7 +163,6 @@ void desenharHUD() {
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
 
-    // disparos
     glColor3f(0.0f, 1.0f, 1.0f);
     glRasterPos2f(10, 480);
     const char* t = "Disparos:";
@@ -161,19 +191,15 @@ void desenharHUD() {
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
     }
 
-    // painel de controle
     glColor3f(1.0f, 0.8f, 0.0f);
     glRasterPos2f(10, 90);
     const char* p = "[ Controles ]";
     while (*p) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *p++);
 
     const char* teclas[] = {
-        "1 -> Estimular A",
-        "2 -> Estimular B",
-        "3 -> Estimular C",
-        "4 -> Estimular D",
-        "5 -> Estimular E",
-        "6 -> Estimular F",
+        "1 -> Estimular A", "2 -> Estimular B",
+        "3 -> Estimular C", "4 -> Estimular D",
+        "5 -> Estimular E", "6 -> Estimular F",
         "R -> Resetar"
     };
     for (int i = 0; i < 7; i++) {
@@ -211,6 +237,9 @@ void display() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
+
+    desenharEstrelas();
+
     glRotatef(anguloX, 1.0f, 0.0f, 0.0f);
     glRotatef(anguloY, 0.0f, 1.0f, 0.0f);
 
@@ -244,8 +273,9 @@ void teclado(unsigned char key, int x, int y) {
             for (int i = 0; i < NUM_NEURONIOS; i++) {
                 neuronios[i] = false;
                 contadores[i] = 0;
-                sinais[i < 8 ? i : 0].ativo = false;
             }
+            for (int i = 0; i < 8; i++)
+                sinais[i].ativo = false;
             glutPostRedisplay();
             return;
     }
@@ -286,6 +316,7 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv* env, jobject obj, j
     gluPerspective(45.0, (double)w/h, 0.1, 100.0);
 
     inicializarSinais();
+    inicializarEstrelas();
 
     glutDisplayFunc(display);
     glutMouseFunc(mouseClick);
