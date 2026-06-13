@@ -8,7 +8,6 @@
 bool neuronios[NUM_NEURONIOS] = {false};
 int contadores[NUM_NEURONIOS] = {0};
 
-// posições das esferas por camada
 float posX[] = {-0.8f, -0.8f,  0.0f,  0.0f,  0.8f,  0.8f};
 float posY[] = { 0.3f, -0.3f,  0.3f, -0.3f,  0.3f, -0.3f};
 const char* nomes[] = {"A", "B", "C", "D", "E", "F"};
@@ -19,36 +18,33 @@ float anguloY = 0.0f;
 int mouseX, mouseY;
 bool mousePressionado = false;
 
-// sinais — uma conexão por par
+// JNI callback
+static JNIEnv* jniEnv = nullptr;
+static jobject mainObj = nullptr;
+static jmethodID estimularMethod = nullptr;
+
+// sinais
 struct Sinal {
     bool ativo = false;
     float progresso = 0.0f;
     float x1, y1, x2, y2;
 };
-
-// A→C, A→D, B→C, B→D, C→E, C→F, D→E, D→F
 Sinal sinais[8];
 
-void inicializarSinais() {
-    sinais[0] = {false, 0.0f, posX[0], posY[0], posX[2], posY[2]}; // A→C
-    sinais[1] = {false, 0.0f, posX[0], posY[0], posX[3], posY[3]}; // A→D
-    sinais[2] = {false, 0.0f, posX[1], posY[1], posX[2], posY[2]}; // B→C
-    sinais[3] = {false, 0.0f, posX[1], posY[1], posX[3], posY[3]}; // B→D
-    sinais[4] = {false, 0.0f, posX[2], posY[2], posX[4], posY[4]}; // C→E
-    sinais[5] = {false, 0.0f, posX[2], posY[2], posX[5], posY[5]}; // C→F
-    sinais[6] = {false, 0.0f, posX[3], posY[3], posX[4], posY[4]}; // D→E
-    sinais[7] = {false, 0.0f, posX[3], posY[3], posX[5], posY[5]}; // D→F
-}
-
-// mapa: qual neurônio dispara → quais sinais ativar
 int sinalPorNeuronio[6][2] = {
-    {0, 1}, // A → sinais 0,1
-    {2, 3}, // B → sinais 2,3
-    {4, 5}, // C → sinais 4,5
-    {6, 7}, // D → sinais 6,7
-    {-1,-1},// E → saída, sem sinais
-    {-1,-1} // F → saída, sem sinais
+    {0, 1}, {2, 3}, {4, 5}, {6, 7}, {-1,-1}, {-1,-1}
 };
+
+void inicializarSinais() {
+    sinais[0] = {false, 0.0f, posX[0], posY[0], posX[2], posY[2]};
+    sinais[1] = {false, 0.0f, posX[0], posY[0], posX[3], posY[3]};
+    sinais[2] = {false, 0.0f, posX[1], posY[1], posX[2], posY[2]};
+    sinais[3] = {false, 0.0f, posX[1], posY[1], posX[3], posY[3]};
+    sinais[4] = {false, 0.0f, posX[2], posY[2], posX[4], posY[4]};
+    sinais[5] = {false, 0.0f, posX[2], posY[2], posX[5], posY[5]};
+    sinais[6] = {false, 0.0f, posX[3], posY[3], posX[4], posY[4]};
+    sinais[7] = {false, 0.0f, posX[3], posY[3], posX[5], posY[5]};
+}
 
 void configurarLuz() {
     glEnable(GL_LIGHTING);
@@ -84,13 +80,13 @@ void desenharEsfera(int id) {
     glPushMatrix();
     glTranslatef(posX[id], posY[id], 0.0f);
     if (neuronios[id])
-        glColor3f(1.0f, 1.0f, 0.0f); // amarelo
+        glColor3f(1.0f, 1.0f, 0.0f);
     else if (id < 2)
-        glColor3f(0.9f, 0.3f, 0.3f); // vermelho = entrada
+        glColor3f(0.9f, 0.3f, 0.3f);
     else if (id < 4)
-        glColor3f(0.3f, 0.9f, 0.3f); // verde = oculta
+        glColor3f(0.3f, 0.9f, 0.3f);
     else
-        glColor3f(0.3f, 0.3f, 0.9f); // azul = saída
+        glColor3f(0.3f, 0.3f, 0.9f);
     glutSolidSphere(0.12, 32, 32);
     glPopMatrix();
 }
@@ -123,7 +119,7 @@ void desenharSinais() {
     glEnable(GL_LIGHTING);
 }
 
-void desenharContadores() {
+void desenharHUD() {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -136,36 +132,55 @@ void desenharContadores() {
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
 
-    // título
+    // disparos
     glColor3f(0.0f, 1.0f, 1.0f);
     glRasterPos2f(10, 480);
-    const char* titulo = "Disparos:";
-    while (*titulo)
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *titulo++);
+    const char* t = "Disparos:";
+    while (*t) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *t++);
 
-    // legenda camadas
     glColor3f(0.9f, 0.3f, 0.3f);
-    glRasterPos2f(10, 460);
+    glRasterPos2f(10, 462);
     const char* l1 = "Entrada: A B";
     while (*l1) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *l1++);
 
     glColor3f(0.3f, 0.9f, 0.3f);
-    glRasterPos2f(10, 445);
+    glRasterPos2f(10, 447);
     const char* l2 = "Oculta:  C D";
     while (*l2) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *l2++);
 
     glColor3f(0.3f, 0.3f, 0.9f);
-    glRasterPos2f(10, 430);
+    glRasterPos2f(10, 432);
     const char* l3 = "Saida:   E F";
     while (*l3) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *l3++);
 
-    // contadores
     for (int i = 0; i < NUM_NEURONIOS; i++) {
         std::string linha = std::string(nomes[i]) + ": " + std::to_string(contadores[i]);
         glColor3f(1.0f, 1.0f, 1.0f);
-        glRasterPos2f(10, 405 - i * 18);
+        glRasterPos2f(10, 410 - i * 18);
         for (char c : linha)
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+    }
+
+    // painel de controle
+    glColor3f(1.0f, 0.8f, 0.0f);
+    glRasterPos2f(10, 90);
+    const char* p = "[ Controles ]";
+    while (*p) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *p++);
+
+    const char* teclas[] = {
+        "1 -> Estimular A",
+        "2 -> Estimular B",
+        "3 -> Estimular C",
+        "4 -> Estimular D",
+        "5 -> Estimular E",
+        "6 -> Estimular F",
+        "R -> Resetar"
+    };
+    for (int i = 0; i < 7; i++) {
+        glColor3f(0.8f, 0.8f, 0.8f);
+        glRasterPos2f(10, 72 - i * 14);
+        const char* k = teclas[i];
+        while (*k) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *k++);
     }
 
     glEnable(GL_DEPTH_TEST);
@@ -210,15 +225,41 @@ void display() {
     for (int i = 0; i < NUM_NEURONIOS; i++)
         desenharTexto(posX[i] - 0.03f, posY[i] + 0.17f, 0.0f, nomes[i]);
 
-    desenharContadores();
+    desenharHUD();
     glutSwapBuffers();
+}
+
+void teclado(unsigned char key, int x, int y) {
+    if (jniEnv == nullptr || mainObj == nullptr) return;
+
+    int id = -1;
+    switch (key) {
+        case '1': id = 0; break;
+        case '2': id = 1; break;
+        case '3': id = 2; break;
+        case '4': id = 3; break;
+        case '5': id = 4; break;
+        case '6': id = 5; break;
+        case 'r': case 'R':
+            for (int i = 0; i < NUM_NEURONIOS; i++) {
+                neuronios[i] = false;
+                contadores[i] = 0;
+                sinais[i < 8 ? i : 0].ativo = false;
+            }
+            glutPostRedisplay();
+            return;
+    }
+
+    if (id >= 0 && estimularMethod != nullptr)
+        jniEnv->CallStaticVoidMethod(
+            jniEnv->GetObjectClass(mainObj),
+            estimularMethod, id);
 }
 
 void mouseClick(int botao, int estado, int x, int y) {
     if (botao == GLUT_LEFT_BUTTON) {
         mousePressionado = (estado == GLUT_DOWN);
-        mouseX = x;
-        mouseY = y;
+        mouseX = x; mouseY = y;
     }
 }
 
@@ -226,12 +267,11 @@ void mouseMove(int x, int y) {
     if (!mousePressionado) return;
     anguloY += (x - mouseX) * 0.5f;
     anguloX += (y - mouseY) * 0.5f;
-    mouseX = x;
-    mouseY = y;
+    mouseX = x; mouseY = y;
     glutPostRedisplay();
 }
 
-JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, jint h) {
+JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv* env, jobject obj, jint w, jint h) {
     int argc = 0;
     glutInit(&argc, nullptr);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
@@ -250,6 +290,7 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
     glutDisplayFunc(display);
     glutMouseFunc(mouseClick);
     glutMotionFunc(mouseMove);
+    glutKeyboardFunc(teclado);
     glutTimerFunc(30, atualizar, 0);
     glutMainLoop();
 }
@@ -257,8 +298,7 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv*, jobject, jint w, j
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio(JNIEnv*, jobject, jint id, jboolean ativo) {
     if (id >= 0 && id < NUM_NEURONIOS)
         neuronios[id] = ativo;
-
-    if (ativo && id < NUM_NEURONIOS) {
+    if (ativo) {
         for (int s = 0; s < 2; s++) {
             int idx = sinalPorNeuronio[id][s];
             if (idx >= 0) {
@@ -274,4 +314,11 @@ JNIEXPORT void JNICALL Java_MotorGrafico_atualizarContador(JNIEnv*, jobject, jin
     if (id >= 0 && id < NUM_NEURONIOS)
         contadores[id] = valor;
     glutPostRedisplay();
+}
+
+JNIEXPORT void JNICALL Java_MotorGrafico_setCallbackEstimulo(JNIEnv* env, jobject obj, jobject mainClass) {
+    jniEnv = env;
+    mainObj = env->NewGlobalRef(mainClass);
+    jclass cls = env->FindClass("Main");
+    estimularMethod = env->GetStaticMethodID(cls, "estimular", "(I)V");
 }

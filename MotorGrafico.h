@@ -31,6 +31,14 @@ JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarContador
   (JNIEnv *, jobject, jint, jint);
 
+/*
+ * Class:     MotorGrafico
+ * Method:    setCallbackEstimulo
+ * Signature: (Ljava/lang/Object;)V
+ */
+JNIEXPORT void JNICALL Java_MotorGrafico_setCallbackEstimulo
+  (JNIEnv *, jobject, jobject);
+
 #ifdef __cplusplus
 }
 #endif
