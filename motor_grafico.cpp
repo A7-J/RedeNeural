@@ -11,6 +11,8 @@ bool neuronios[NUM_NEURONIOS] = {false};
 int contadores[NUM_NEURONIOS] = {0};
 float haloRaio[NUM_NEURONIOS] = {0};
 bool haloAtivo[NUM_NEURONIOS] = {false};
+bool modoAutomatico = false;
+int autoTimer = 0;
 
 float posX[] = {-0.8f, -0.8f,  0.0f,  0.0f,  0.8f,  0.8f};
 float posY[] = { 0.3f, -0.3f,  0.3f, -0.3f,  0.3f, -0.3f};
@@ -111,14 +113,13 @@ void desenharHalo(int id) {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     float raio = haloRaio[id];
-    float alpha = 1.0f - (raio / 0.5f); // some conforme expande
+    float alpha = 1.0f - (raio / 0.5f);
     if (alpha < 0) alpha = 0;
 
     glPushMatrix();
     glTranslatef(posX[id], posY[id], 0.0f);
     glColor4f(1.0f, 1.0f, 0.0f, alpha);
 
-    // anel de halo
     int segmentos = 64;
     glLineWidth(2.0f);
     glBegin(GL_LINE_LOOP);
@@ -235,6 +236,12 @@ void desenharHUD() {
         while (*k) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *k++);
     }
 
+    // modo automático
+    glColor3f(0.0f, 1.0f, 0.0f);
+    glRasterPos2f(10, 200);
+    const char* modo = modoAutomatico ? "A -> Modo AUTO: ON " : "A -> Modo AUTO: OFF";
+    while (*modo) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *modo++);
+
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
 
@@ -242,6 +249,18 @@ void desenharHUD() {
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
+}
+
+void estimularAutomatico(int valor) {
+    if (!modoAutomatico) return;
+    if (jniEnv != nullptr && estimularMethod != nullptr) {
+        int id = (autoTimer % 2 == 0) ? 0 : 1;
+        jniEnv->CallStaticVoidMethod(
+            jniEnv->GetObjectClass(mainObj),
+            estimularMethod, id);
+        autoTimer++;
+    }
+    glutTimerFunc(800, estimularAutomatico, 0);
 }
 
 void atualizar(int valor) {
@@ -254,7 +273,6 @@ void atualizar(int valor) {
         }
     }
 
-    // atualiza halos
     for (int i = 0; i < NUM_NEURONIOS; i++) {
         if (!haloAtivo[i]) continue;
         haloRaio[i] += 0.02f;
@@ -309,6 +327,11 @@ void teclado(unsigned char key, int x, int y) {
         case '4': id = 3; break;
         case '5': id = 4; break;
         case '6': id = 5; break;
+        case 'a': case 'A':
+            modoAutomatico = !modoAutomatico;
+            if (modoAutomatico)
+                glutTimerFunc(800, estimularAutomatico, 0);
+            return;
         case 'r': case 'R':
             for (int i = 0; i < NUM_NEURONIOS; i++) {
                 neuronios[i] = false;
