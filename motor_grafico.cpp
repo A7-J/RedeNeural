@@ -9,23 +9,22 @@
 
 bool neuronios[NUM_NEURONIOS] = {false};
 int contadores[NUM_NEURONIOS] = {0};
+float haloRaio[NUM_NEURONIOS] = {0};
+bool haloAtivo[NUM_NEURONIOS] = {false};
 
 float posX[] = {-0.8f, -0.8f,  0.0f,  0.0f,  0.8f,  0.8f};
 float posY[] = { 0.3f, -0.3f,  0.3f, -0.3f,  0.3f, -0.3f};
 const char* nomes[] = {"A", "B", "C", "D", "E", "F"};
 
-// câmera
 float anguloX = 0.0f;
 float anguloY = 0.0f;
 int mouseX, mouseY;
 bool mousePressionado = false;
 
-// JNI callback
 static JNIEnv* jniEnv = nullptr;
 static jobject mainObj = nullptr;
 static jmethodID estimularMethod = nullptr;
 
-// sinais
 struct Sinal {
     bool ativo = false;
     float progresso = 0.0f;
@@ -37,10 +36,7 @@ int sinalPorNeuronio[6][2] = {
     {0, 1}, {2, 3}, {4, 5}, {6, 7}, {-1,-1}, {-1,-1}
 };
 
-// estrelas
-struct Estrela {
-    float x, y, z, brilho;
-};
+struct Estrela { float x, y, z, brilho; };
 Estrela estrelas[NUM_ESTRELAS];
 
 void inicializarEstrelas() {
@@ -104,6 +100,36 @@ void desenharTexto(float x, float y, float z, const char* texto) {
     glRasterPos3f(x, y, z);
     while (*texto)
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *texto++);
+    glEnable(GL_LIGHTING);
+}
+
+void desenharHalo(int id) {
+    if (!haloAtivo[id]) return;
+
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    float raio = haloRaio[id];
+    float alpha = 1.0f - (raio / 0.5f); // some conforme expande
+    if (alpha < 0) alpha = 0;
+
+    glPushMatrix();
+    glTranslatef(posX[id], posY[id], 0.0f);
+    glColor4f(1.0f, 1.0f, 0.0f, alpha);
+
+    // anel de halo
+    int segmentos = 64;
+    glLineWidth(2.0f);
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < segmentos; i++) {
+        float angulo = i * 2.0f * 3.14159f / segmentos;
+        glVertex3f(raio * cos(angulo), raio * sin(angulo), 0.0f);
+    }
+    glEnd();
+
+    glPopMatrix();
+    glDisable(GL_BLEND);
     glEnable(GL_LIGHTING);
 }
 
@@ -227,6 +253,17 @@ void atualizar(int valor) {
             sinais[i].progresso = 0.0f;
         }
     }
+
+    // atualiza halos
+    for (int i = 0; i < NUM_NEURONIOS; i++) {
+        if (!haloAtivo[i]) continue;
+        haloRaio[i] += 0.02f;
+        if (haloRaio[i] >= 0.5f) {
+            haloAtivo[i] = false;
+            haloRaio[i] = 0.0f;
+        }
+    }
+
     glutPostRedisplay();
     glutTimerFunc(30, atualizar, 0);
 }
@@ -245,6 +282,9 @@ void display() {
 
     configurarLuz();
     desenharConexoes();
+
+    for (int i = 0; i < NUM_NEURONIOS; i++)
+        desenharHalo(i);
 
     for (int i = 0; i < NUM_NEURONIOS; i++)
         desenharEsfera(i);
@@ -273,6 +313,8 @@ void teclado(unsigned char key, int x, int y) {
             for (int i = 0; i < NUM_NEURONIOS; i++) {
                 neuronios[i] = false;
                 contadores[i] = 0;
+                haloAtivo[i] = false;
+                haloRaio[i] = 0.0f;
             }
             for (int i = 0; i < 8; i++)
                 sinais[i].ativo = false;
@@ -329,7 +371,11 @@ JNIEXPORT void JNICALL Java_MotorGrafico_inicializar(JNIEnv* env, jobject obj, j
 JNIEXPORT void JNICALL Java_MotorGrafico_atualizarNeuronio(JNIEnv*, jobject, jint id, jboolean ativo) {
     if (id >= 0 && id < NUM_NEURONIOS)
         neuronios[id] = ativo;
-    if (ativo) {
+
+    if (ativo && id < NUM_NEURONIOS) {
+        haloAtivo[id] = true;
+        haloRaio[id] = 0.12f;
+
         for (int s = 0; s < 2; s++) {
             int idx = sinalPorNeuronio[id][s];
             if (idx >= 0) {
