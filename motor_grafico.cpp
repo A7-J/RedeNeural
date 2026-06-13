@@ -151,9 +151,20 @@ void desenharEsfera(int id) {
 
 void desenharConexoes() {
     glDisable(GL_LIGHTING);
-    glColor3f(0.5f, 0.5f, 0.5f);
     glLineWidth(1.5f);
+
     for (int i = 0; i < 8; i++) {
+        // verifica se tem sinal passando nessa conexão
+        float brilho = 0.0f;
+        if (sinais[i].ativo)
+            brilho = sinais[i].progresso;
+
+        // interpola entre cinza e ciano conforme o sinal passa
+        float r = 0.5f + (0.0f - 0.5f) * brilho;
+        float g = 0.5f + (1.0f - 0.5f) * brilho;
+        float b = 0.5f + (1.0f - 0.5f) * brilho;
+
+        glColor3f(r, g, b);
         glBegin(GL_LINES);
             glVertex3f(sinais[i].x1, sinais[i].y1, 0.0f);
             glVertex3f(sinais[i].x2, sinais[i].y2, 0.0f);
