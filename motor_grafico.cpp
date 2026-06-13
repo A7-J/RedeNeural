@@ -253,6 +253,27 @@ void desenharHUD() {
     const char* modo = modoAutomatico ? "A -> Modo AUTO: ON " : "A -> Modo AUTO: OFF";
     while (*modo) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *modo++);
 
+    // título no canto superior direito
+glColor3f(0.0f, 0.8f, 1.0f);
+glRasterPos2f(420, 480);
+const char* titulo = "Visualizador de Redes Neurais Biologicas";
+while (*titulo) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *titulo++);
+
+glColor3f(0.7f, 0.7f, 0.7f);
+glRasterPos2f(420, 465);
+const char* autor = "Arthur Pires - UNIR";
+while (*autor) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *autor++);
+
+glColor3f(0.5f, 0.5f, 0.5f);
+glRasterPos2f(420, 450);
+const char* orient = "Orientador: Prof. Dr. Lucas Marques da Cunha";
+while (*orient) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *orient++);
+
+glColor3f(0.4f, 0.4f, 0.4f);
+glRasterPos2f(420, 435);
+const char* stack = "Java + JNI + C++ + OpenGL";
+while (*stack) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *stack++);
+
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
 
