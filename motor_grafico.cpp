@@ -324,6 +324,39 @@ void atualizar(int valor) {
     glutTimerFunc(30, atualizar, 0);
 }
 
+void desenharFundo() {
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(-1, 1, -1, 1);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glBegin(GL_QUADS);
+        // topo — azul escuro profundo
+        glColor3f(0.0f, 0.05f, 0.15f);
+        glVertex2f(-1.0f,  1.0f);
+        glVertex2f( 1.0f,  1.0f);
+        // base — preto
+        glColor3f(0.0f, 0.0f, 0.0f);
+        glVertex2f( 1.0f, -1.0f);
+        glVertex2f(-1.0f, -1.0f);
+    glEnd();
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+}
+
 void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -331,6 +364,7 @@ void display() {
     glLoadIdentity();
     gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0);
 
+    desenharFundo(); 
     desenharEstrelas();
 
     glRotatef(anguloX, 1.0f, 0.0f, 0.0f);
