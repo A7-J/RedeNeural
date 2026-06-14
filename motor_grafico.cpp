@@ -13,6 +13,7 @@ float haloRaio[NUM_NEURONIOS] = {0};
 bool haloAtivo[NUM_NEURONIOS] = {false};
 bool modoAutomatico = false;
 int autoTimer = 0;
+float velocidade = 0.04f; // velocidade padrão do sinal
 
 float posX[] = {-0.8f, -0.8f,  0.0f,  0.0f,  0.8f,  0.8f};
 float posY[] = { 0.3f, -0.3f,  0.3f, -0.3f,  0.3f, -0.3f};
@@ -253,26 +254,31 @@ void desenharHUD() {
     const char* modo = modoAutomatico ? "A -> Modo AUTO: ON " : "A -> Modo AUTO: OFF";
     while (*modo) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *modo++);
 
+    glColor3f(0.8f, 0.8f, 0.0f);
+    glRasterPos2f(10, 250);
+    std::string vel = "+ / - Velocidade: " + std::to_string((int)(velocidade * 100)) + "%";
+    const char* vs = vel.c_str();
+    while (*vs) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *vs++);
     // título no canto superior direito
-glColor3f(0.0f, 0.8f, 1.0f);
-glRasterPos2f(420, 480);
-const char* titulo = "Visualizador de Redes Neurais Biologicas";
-while (*titulo) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *titulo++);
+    glColor3f(0.0f, 0.8f, 1.0f);
+    glRasterPos2f(420, 480);
+    const char* titulo = "Visualizador de Redes Neurais Biologicas";
+    while (*titulo) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *titulo++);
 
-glColor3f(0.7f, 0.7f, 0.7f);
-glRasterPos2f(420, 465);
-const char* autor = "Arthur Pires - UNIR";
-while (*autor) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *autor++);
+    glColor3f(0.7f, 0.7f, 0.7f);
+    glRasterPos2f(420, 465);
+    const char* autor = "Arthur Pires - UNIR";
+    while (*autor) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *autor++);
 
-glColor3f(0.5f, 0.5f, 0.5f);
-glRasterPos2f(420, 450);
-const char* orient = "Orientador: Prof. Dr. Lucas Marques da Cunha";
-while (*orient) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *orient++);
+    glColor3f(0.5f, 0.5f, 0.5f);
+    glRasterPos2f(420, 450);
+    const char* orient = "Orientador: Prof. Dr. Lucas Marques da Cunha";
+    while (*orient) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *orient++);
 
-glColor3f(0.4f, 0.4f, 0.4f);
-glRasterPos2f(420, 435);
-const char* stack = "Java + JNI + C++ + OpenGL";
-while (*stack) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *stack++);
+    glColor3f(0.4f, 0.4f, 0.4f);
+    glRasterPos2f(420, 435);
+    const char* stack = "Java + JNI + C++ + OpenGL";
+    while (*stack) glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *stack++);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
@@ -298,7 +304,7 @@ void estimularAutomatico(int valor) {
 void atualizar(int valor) {
     for (int i = 0; i < 8; i++) {
         if (!sinais[i].ativo) continue;
-        sinais[i].progresso += 0.04f;
+        sinais[i].progresso += velocidade;
         if (sinais[i].progresso >= 1.0f) {
             sinais[i].ativo = false;
             sinais[i].progresso = 0.0f;
@@ -359,6 +365,14 @@ void teclado(unsigned char key, int x, int y) {
         case '4': id = 3; break;
         case '5': id = 4; break;
         case '6': id = 5; break;
+        case '+':
+        velocidade += 0.01f;
+        if (velocidade > 0.15f) velocidade = 0.15f;
+        return;
+        case '-':
+        velocidade -= 0.01f;
+         if (velocidade < 0.01f) velocidade = 0.01f;
+        return;
         case 'a': case 'A':
             modoAutomatico = !modoAutomatico;
             if (modoAutomatico)
