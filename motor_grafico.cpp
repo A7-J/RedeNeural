@@ -172,7 +172,6 @@ void desenharHalo(int id) {
     glEnable(GL_LIGHTING);
 }
 
-
 void desenharEsfera(int id) {
     glPushMatrix();
     glTranslatef(posX[id], posY[id], 0.0f);
@@ -188,9 +187,14 @@ void desenharEsfera(int id) {
         r = 0.3f; g = 0.3f; b = 0.9f;
     }
 
-    int stacks = 32;
-    int slices = 32;
+    int stacks = 64;
+    int slices = 64;
     float raio = 0.12f;
+
+    // direção da luz para cálculo manual de iluminação
+    float lx = 2.0f, ly = 2.0f, lz = 3.0f;
+    float llen = sqrt(lx*lx + ly*ly + lz*lz);
+    lx /= llen; ly /= llen; lz /= llen;
 
     for (int i = 0; i < stacks; i++) {
         float phi1 = M_PI * i / stacks;
@@ -204,59 +208,61 @@ void desenharEsfera(int id) {
             float v1 = (float)i / stacks;
             float v2 = (float)(i + 1) / stacks;
 
-            float brilho1, brilho2;
+            for (int v = 0; v < 2; v++) {
+                float phi = (v == 0) ? phi1 : phi2;
+                float vt = (v == 0) ? v1 : v2;
 
-            if (id < 2) {
-                // Entrada — grade reta
-                int grade = 6;
-                bool linhaU  = (fmod(u * grade, 1.0f) < 0.1f);
-                bool linhaV1 = (fmod(v1 * grade, 1.0f) < 0.1f);
-                bool linhaV2 = (fmod(v2 * grade, 1.0f) < 0.1f);
-                brilho1 = (linhaU || linhaV1) ? 0.3f : 1.0f;
-                brilho2 = (linhaU || linhaV2) ? 0.3f : 1.0f;
+                // normal da esfera
+                float nx = sin(phi) * cos(theta);
+                float ny = sin(phi) * sin(theta);
+                float nz = cos(phi);
 
-            } else if (id < 4) {
-                // Oculta — ondas senoidais
-                float onda1 = sin(u * M_PI * 8) * sin(v1 * M_PI * 8);
-                float onda2 = sin(u * M_PI * 8) * sin(v2 * M_PI * 8);
-                brilho1 = 0.6f + 0.4f * onda1;
-                brilho2 = 0.6f + 0.4f * onda2;
+                // difuso — dot product normal * luz
+                float difuso = nx * lx + ny * ly + nz * lz;
+                if (difuso < 0) difuso = 0;
 
-            } else {
-                // Saída — manchas irregulares (ruído)
-                float ruido1 = fabs(sin(u * 17.3f) * cos(v1 * 13.7f) *
-                               sin((u + v1) * 9.1f));
-                float ruido2 = fabs(sin(u * 17.3f) * cos(v2 * 13.7f) *
-                               sin((u + v2) * 9.1f));
-                brilho1 = 0.4f + 0.6f * ruido1;
-                brilho2 = 0.4f + 0.6f * ruido2;
+                // especular — reflexão de Phong
+                float rx = 2.0f * difuso * nx - lx;
+                float ry = 2.0f * difuso * ny - ly;
+                float rz = 2.0f * difuso * nz - lz;
+                float vdotr = rz; // câmera em Z+
+                if (vdotr < 0) vdotr = 0;
+                float especular = pow(vdotr, 32) * 0.8f;
+
+                // textura por camada
+                float textura;
+                if (id < 2) {
+                    // grade — entrada
+                    int grade = 8;
+                    bool linhaU = (fmod(u * grade, 1.0f) < 0.08f);
+                    bool linhaV = (fmod(vt * grade, 1.0f) < 0.08f);
+                    textura = (linhaU || linhaV) ? 0.25f : 1.0f;
+                } else if (id < 4) {
+                    // ondas senoidais — oculta
+                    float onda = sin(u * M_PI * 10) * sin(vt * M_PI * 10);
+                    textura = 0.5f + 0.5f * onda;
+                } else {
+                    // manchas — saída
+                    float ruido = fabs(sin(u * 19.3f) * cos(vt * 15.7f) *
+                                  sin((u + vt) * 11.1f));
+                    textura = 0.35f + 0.65f * ruido;
+                }
+
+                // combina textura + difuso + especular
+                float ambient = 0.15f;
+                float final_r = r * (ambient + textura * difuso * 0.85f) + especular;
+                float final_g = g * (ambient + textura * difuso * 0.85f) + especular;
+                float final_b = b * (ambient + textura * difuso * 0.85f) + especular;
+
+                // clamp 0-1
+                if (final_r > 1.0f) final_r = 1.0f;
+                if (final_g > 1.0f) final_g = 1.0f;
+                if (final_b > 1.0f) final_b = 1.0f;
+
+                glColor3f(final_r, final_g, final_b);
+                glNormal3f(nx, ny, nz);
+                glVertex3f(raio * nx, raio * ny, raio * nz);
             }
-
-            // vértice 1
-            glColor3f(r * brilho1, g * brilho1, b * brilho1);
-            glNormal3f(
-                sin(phi1) * cos(theta),
-                sin(phi1) * sin(theta),
-                cos(phi1)
-            );
-            glVertex3f(
-                raio * sin(phi1) * cos(theta),
-                raio * sin(phi1) * sin(theta),
-                raio * cos(phi1)
-            );
-
-            // vértice 2
-            glColor3f(r * brilho2, g * brilho2, b * brilho2);
-            glNormal3f(
-                sin(phi2) * cos(theta),
-                sin(phi2) * sin(theta),
-                cos(phi2)
-            );
-            glVertex3f(
-                raio * sin(phi2) * cos(theta),
-                raio * sin(phi2) * sin(theta),
-                raio * cos(phi2)
-            );
         }
         glEnd();
     }
