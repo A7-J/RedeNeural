@@ -117,7 +117,7 @@ void desenharHalo(int id) {
 
     glDisable(GL_LIGHTING);
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);  // aditivo — mais brilhante
 
     float raio = haloRaio[id];
     float alpha = 1.0f - (raio / 0.5f);
@@ -125,21 +125,53 @@ void desenharHalo(int id) {
 
     glPushMatrix();
     glTranslatef(posX[id], posY[id], 0.0f);
-    glColor4f(1.0f, 1.0f, 0.0f, alpha);
 
-    int segmentos = 64;
-    glLineWidth(2.0f);
-    glBegin(GL_LINE_LOOP);
-    for (int i = 0; i < segmentos; i++) {
-        float angulo = i * 2.0f * 3.14159f / segmentos;
+    // cor do bloom por camada
+    float r, g, b;
+    if (neuronios[id]) {
+        r = 1.0f; g = 1.0f; b = 0.0f; // amarelo
+    } else if (id < 2) {
+        r = 1.0f; g = 0.2f; b = 0.2f; // vermelho neon
+    } else if (id < 4) {
+        r = 0.2f; g = 1.0f; b = 0.2f; // verde neon
+    } else {
+        r = 0.2f; g = 0.4f; b = 1.0f; // azul neon
+    }
+
+    // múltiplos anéis concêntricos — efeito bloom
+    int aneis = 5;
+    for (int a = 0; a < aneis; a++) {
+        float raioAnel = raio + a * 0.03f;
+        float alphaAnel = alpha * (1.0f - (float)a / aneis) * 0.6f;
+
+        glColor4f(r, g, b, alphaAnel);
+        glLineWidth(2.0f - a * 0.3f);
+        glBegin(GL_LINE_LOOP);
+        for (int i = 0; i < 64; i++) {
+            float angulo = i * 2.0f * M_PI / 64;
+            glVertex3f(raioAnel * cos(angulo), raioAnel * sin(angulo), 0.0f);
+        }
+        glEnd();
+    }
+
+    // brilho central — círculo preenchido translúcido
+    float alphaCore = alpha * 0.15f;
+    glColor4f(r, g, b, alphaCore);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+    for (int i = 0; i <= 64; i++) {
+        float angulo = i * 2.0f * M_PI / 64;
         glVertex3f(raio * cos(angulo), raio * sin(angulo), 0.0f);
     }
     glEnd();
 
     glPopMatrix();
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_BLEND);
     glEnable(GL_LIGHTING);
 }
+
 
 void desenharEsfera(int id) {
     glPushMatrix();
