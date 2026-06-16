@@ -139,16 +139,15 @@ void desenharEsfera(int id) {
     glPushMatrix();
     glTranslatef(posX[id], posY[id], 0.0f);
 
-    // define cor base
     float r, g, b;
     if (neuronios[id]) {
-        r = 1.0f; g = 1.0f; b = 0.0f; // amarelo
+        r = 1.0f; g = 1.0f; b = 0.0f;
     } else if (id < 2) {
-        r = 0.9f; g = 0.3f; b = 0.3f; // vermelho
+        r = 0.9f; g = 0.3f; b = 0.3f;
     } else if (id < 4) {
-        r = 0.3f; g = 0.9f; b = 0.3f; // verde
+        r = 0.3f; g = 0.9f; b = 0.3f;
     } else {
-        r = 0.3f; g = 0.3f; b = 0.9f; // azul
+        r = 0.3f; g = 0.3f; b = 0.9f;
     }
 
     int stacks = 32;
@@ -163,19 +162,39 @@ void desenharEsfera(int id) {
         for (int j = 0; j <= slices; j++) {
             float theta = 2.0f * M_PI * j / slices;
 
-            // coordenadas UV
             float u = (float)j / slices;
             float v1 = (float)i / stacks;
             float v2 = (float)(i + 1) / stacks;
 
-            // padrão de grade via UV — textura procedural
-            int grade = 6;
-            bool linhaU = (fmod(u * grade, 1.0f) < 0.1f);
-            bool linhaV1 = (fmod(v1 * grade, 1.0f) < 0.1f);
-            bool linhaV2 = (fmod(v2 * grade, 1.0f) < 0.1f);
+            float brilho1, brilho2;
+
+            if (id < 2) {
+                // Entrada — grade reta
+                int grade = 6;
+                bool linhaU  = (fmod(u * grade, 1.0f) < 0.1f);
+                bool linhaV1 = (fmod(v1 * grade, 1.0f) < 0.1f);
+                bool linhaV2 = (fmod(v2 * grade, 1.0f) < 0.1f);
+                brilho1 = (linhaU || linhaV1) ? 0.3f : 1.0f;
+                brilho2 = (linhaU || linhaV2) ? 0.3f : 1.0f;
+
+            } else if (id < 4) {
+                // Oculta — ondas senoidais
+                float onda1 = sin(u * M_PI * 8) * sin(v1 * M_PI * 8);
+                float onda2 = sin(u * M_PI * 8) * sin(v2 * M_PI * 8);
+                brilho1 = 0.6f + 0.4f * onda1;
+                brilho2 = 0.6f + 0.4f * onda2;
+
+            } else {
+                // Saída — manchas irregulares (ruído)
+                float ruido1 = fabs(sin(u * 17.3f) * cos(v1 * 13.7f) *
+                               sin((u + v1) * 9.1f));
+                float ruido2 = fabs(sin(u * 17.3f) * cos(v2 * 13.7f) *
+                               sin((u + v2) * 9.1f));
+                brilho1 = 0.4f + 0.6f * ruido1;
+                brilho2 = 0.4f + 0.6f * ruido2;
+            }
 
             // vértice 1
-            float brilho1 = (linhaU || linhaV1) ? 0.4f : 1.0f;
             glColor3f(r * brilho1, g * brilho1, b * brilho1);
             glNormal3f(
                 sin(phi1) * cos(theta),
@@ -189,7 +208,6 @@ void desenharEsfera(int id) {
             );
 
             // vértice 2
-            float brilho2 = (linhaU || linhaV2) ? 0.4f : 1.0f;
             glColor3f(r * brilho2, g * brilho2, b * brilho2);
             glNormal3f(
                 sin(phi2) * cos(theta),
