@@ -270,26 +270,43 @@ void desenharEsfera(int id) {
     glPopMatrix();
 }
 
+void desenharCurvaBezier(float x1, float y1, float x2, float y2, float r, float g, float b) {
+    // ponto de controle no meio — deslocado pra cima pra criar curva
+    float cx = (x1 + x2) / 2.0f;
+    float cy = (y1 + y2) / 2.0f + 0.2f;
+
+    int segmentos = 30;
+    glBegin(GL_LINE_STRIP);
+    for (int i = 0; i <= segmentos; i++) {
+        float t = (float)i / segmentos;
+        float mt = 1.0f - t;
+
+        // Bézier quadrática: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+        float x = mt*mt*x1 + 2*mt*t*cx + t*t*x2;
+        float y = mt*mt*y1 + 2*mt*t*cy + t*t*y2;
+
+        glColor3f(r, g, b);
+        glVertex3f(x, y, 0.0f);
+    }
+    glEnd();
+}
+
 void desenharConexoes() {
     glDisable(GL_LIGHTING);
     glLineWidth(1.5f);
 
     for (int i = 0; i < 8; i++) {
-        // verifica se tem sinal passando nessa conexão
-        float brilho = 0.0f;
-        if (sinais[i].ativo)
-            brilho = sinais[i].progresso;
+        float brilho = sinais[i].ativo ? sinais[i].progresso : 0.0f;
 
-        // interpola entre cinza e ciano conforme o sinal passa
-        float r = 0.5f + (0.0f - 0.5f) * brilho;
-        float g = 0.5f + (1.0f - 0.5f) * brilho;
-        float b = 0.5f + (1.0f - 0.5f) * brilho;
+        float r = 0.3f + 0.0f * brilho;
+        float g = 0.3f + 0.7f * brilho;
+        float b = 0.3f + 0.7f * brilho;
 
-        glColor3f(r, g, b);
-        glBegin(GL_LINES);
-            glVertex3f(sinais[i].x1, sinais[i].y1, 0.0f);
-            glVertex3f(sinais[i].x2, sinais[i].y2, 0.0f);
-        glEnd();
+        desenharCurvaBezier(
+            sinais[i].x1, sinais[i].y1,
+            sinais[i].x2, sinais[i].y2,
+            r, g, b
+        );
     }
     glEnable(GL_LIGHTING);
 }
@@ -298,8 +315,19 @@ void desenharSinais() {
     glDisable(GL_LIGHTING);
     for (int i = 0; i < 8; i++) {
         if (!sinais[i].ativo) continue;
-        float x = sinais[i].x1 + (sinais[i].x2 - sinais[i].x1) * sinais[i].progresso;
-        float y = sinais[i].y1 + (sinais[i].y2 - sinais[i].y1) * sinais[i].progresso;
+
+        float t = sinais[i].progresso;
+        float mt = 1.0f - t;
+
+        float x1 = sinais[i].x1, y1 = sinais[i].y1;
+        float x2 = sinais[i].x2, y2 = sinais[i].y2;
+        float cx = (x1 + x2) / 2.0f;
+        float cy = (y1 + y2) / 2.0f + 0.2f;
+
+        // segue a curva de Bézier
+        float x = mt*mt*x1 + 2*mt*t*cx + t*t*x2;
+        float y = mt*mt*y1 + 2*mt*t*cy + t*t*y2;
+
         glColor3f(0.0f, 1.0f, 1.0f);
         glPointSize(8.0f);
         glBegin(GL_POINTS);
