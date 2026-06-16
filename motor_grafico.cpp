@@ -138,15 +138,73 @@ void desenharHalo(int id) {
 void desenharEsfera(int id) {
     glPushMatrix();
     glTranslatef(posX[id], posY[id], 0.0f);
-    if (neuronios[id])
-        glColor3f(1.0f, 1.0f, 0.0f);
-    else if (id < 2)
-        glColor3f(0.9f, 0.3f, 0.3f);
-    else if (id < 4)
-        glColor3f(0.3f, 0.9f, 0.3f);
-    else
-        glColor3f(0.3f, 0.3f, 0.9f);
-    glutSolidSphere(0.12, 32, 32);
+
+    // define cor base
+    float r, g, b;
+    if (neuronios[id]) {
+        r = 1.0f; g = 1.0f; b = 0.0f; // amarelo
+    } else if (id < 2) {
+        r = 0.9f; g = 0.3f; b = 0.3f; // vermelho
+    } else if (id < 4) {
+        r = 0.3f; g = 0.9f; b = 0.3f; // verde
+    } else {
+        r = 0.3f; g = 0.3f; b = 0.9f; // azul
+    }
+
+    int stacks = 32;
+    int slices = 32;
+    float raio = 0.12f;
+
+    for (int i = 0; i < stacks; i++) {
+        float phi1 = M_PI * i / stacks;
+        float phi2 = M_PI * (i + 1) / stacks;
+
+        glBegin(GL_TRIANGLE_STRIP);
+        for (int j = 0; j <= slices; j++) {
+            float theta = 2.0f * M_PI * j / slices;
+
+            // coordenadas UV
+            float u = (float)j / slices;
+            float v1 = (float)i / stacks;
+            float v2 = (float)(i + 1) / stacks;
+
+            // padrão de grade via UV — textura procedural
+            int grade = 6;
+            bool linhaU = (fmod(u * grade, 1.0f) < 0.1f);
+            bool linhaV1 = (fmod(v1 * grade, 1.0f) < 0.1f);
+            bool linhaV2 = (fmod(v2 * grade, 1.0f) < 0.1f);
+
+            // vértice 1
+            float brilho1 = (linhaU || linhaV1) ? 0.4f : 1.0f;
+            glColor3f(r * brilho1, g * brilho1, b * brilho1);
+            glNormal3f(
+                sin(phi1) * cos(theta),
+                sin(phi1) * sin(theta),
+                cos(phi1)
+            );
+            glVertex3f(
+                raio * sin(phi1) * cos(theta),
+                raio * sin(phi1) * sin(theta),
+                raio * cos(phi1)
+            );
+
+            // vértice 2
+            float brilho2 = (linhaU || linhaV2) ? 0.4f : 1.0f;
+            glColor3f(r * brilho2, g * brilho2, b * brilho2);
+            glNormal3f(
+                sin(phi2) * cos(theta),
+                sin(phi2) * sin(theta),
+                cos(phi2)
+            );
+            glVertex3f(
+                raio * sin(phi2) * cos(theta),
+                raio * sin(phi2) * sin(theta),
+                raio * cos(phi2)
+            );
+        }
+        glEnd();
+    }
+
     glPopMatrix();
 }
 
