@@ -58,7 +58,13 @@ void desenharEstrelas() {
     glBegin(GL_POINTS);
     for (int i = 0; i < NUM_ESTRELAS; i++) {
         float b = estrelas[i].brilho;
-        glColor3f(b, b, b);
+        // alterna entre branco, azul e roxo
+        if (i % 3 == 0)
+            glColor3f(b, b, b);           // branco
+        else if (i % 3 == 1)
+            glColor3f(b * 0.6f, b * 0.6f, b); // azulado
+        else
+            glColor3f(b * 0.7f, b * 0.3f, b); // roxo
         glVertex3f(estrelas[i].x, estrelas[i].y, estrelas[i].z);
     }
     glEnd();
@@ -413,16 +419,53 @@ void desenharFundo() {
     glPushMatrix();
     glLoadIdentity();
 
+    // gradiente roxo/azul profundo
     glBegin(GL_QUADS);
-        // topo — azul escuro profundo
-        glColor3f(0.0f, 0.05f, 0.15f);
+        glColor3f(0.08f, 0.0f, 0.15f); // roxo escuro topo
         glVertex2f(-1.0f,  1.0f);
         glVertex2f( 1.0f,  1.0f);
-        // base — preto
-        glColor3f(0.0f, 0.0f, 0.0f);
+        glColor3f(0.0f, 0.0f, 0.08f);  // azul escuro base
         glVertex2f( 1.0f, -1.0f);
         glVertex2f(-1.0f, -1.0f);
     glEnd();
+
+    // névoa roxa no centro
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    int camadas = 6;
+    for (int k = 0; k < camadas; k++) {
+        float raio = 0.3f + k * 0.12f;
+        float alpha = 0.04f - k * 0.005f;
+        if (alpha <= 0) continue;
+
+        glColor4f(0.4f, 0.0f, 0.8f, alpha);
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex2f(0.0f, 0.0f);
+        for (int i = 0; i <= 64; i++) {
+            float angulo = i * 2.0f * M_PI / 64;
+            glVertex2f(raio * cos(angulo), raio * sin(angulo));
+        }
+        glEnd();
+    }
+
+    // névoa secundária azul deslocada
+    for (int k = 0; k < 4; k++) {
+        float raio = 0.2f + k * 0.1f;
+        float alpha = 0.03f - k * 0.005f;
+        if (alpha <= 0) continue;
+
+        glColor4f(0.0f, 0.2f, 0.8f, alpha);
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex2f(-0.3f, 0.2f);
+        for (int i = 0; i <= 64; i++) {
+            float angulo = i * 2.0f * M_PI / 64;
+            glVertex2f(-0.3f + raio * cos(angulo), 0.2f + raio * sin(angulo));
+        }
+        glEnd();
+    }
+
+    glDisable(GL_BLEND);
 
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
