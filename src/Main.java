@@ -7,7 +7,7 @@ public class Main {
             try {
                 switch (id) {
                     case 0 -> a.receberEstimulo(0.4);
-                    case 1 -> b.receberEstimulo(0.4);
+                    case 1 -> b.receberEstimulo(0.1);
                     case 2 -> c.receberEstimulo(0.4);
                     case 3 -> d.receberEstimulo(0.4);
                     case 4 -> e.receberEstimulo(0.4);
@@ -36,7 +36,7 @@ public class Main {
         Neuronio.setMotor(motor);
 
         motor.setCallbackEstimulo(new Main());
-        motor.inicializar(700, 500);
-        motor.inicializar(700, 500);
+        motor.inicializar(900, 600);
+        motor.inicializar(900, 600);
     }
 }

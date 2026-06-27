@@ -23,6 +23,7 @@ float anguloX = 0.0f;
 float anguloY = 0.0f;
 int mouseX, mouseY;
 bool mousePressionado = false;
+bool mouseMoveu = false;
 
 static JNIEnv* jniEnv = nullptr;
 static jobject mainObj = nullptr;
@@ -573,6 +574,46 @@ void display() {
     glutSwapBuffers();
 }
 
+void estimular(int id) {
+    if (id < 0 || id >= NUM_NEURONIOS) return;
+    if (jniEnv != nullptr && estimularMethod != nullptr)
+        jniEnv->CallStaticVoidMethod(
+            jniEnv->GetObjectClass(mainObj),
+            estimularMethod, id);
+}
+
+void clicouEmEsfera(int x, int y, int largura, int altura) {
+    float nx = (2.0f * x / largura) - 1.0f;
+    float ny = 1.0f - (2.0f * y / altura);
+
+    float escalaX = 1.3f;
+    float escalaY = 1.3f * ((float)altura / largura) * ((float)largura / altura);
+    // ajusta proporção considerando aspect ratio da janela
+    float aspect = (float)largura / altura;
+    float mundoX = nx * 1.3f;
+    float mundoY = ny * 1.3f / aspect * aspect; // simplificado
+
+    mundoX = nx * 1.3f;
+    mundoY = ny * 1.3f;
+
+    float menorDist = 999.0f;
+    int idMaisProximo = -1;
+
+    for (int i = 0; i < NUM_NEURONIOS; i++) {
+        float dx = posX[i] - mundoX;
+        float dy = posY[i] - mundoY;
+        float dist = sqrt(dx * dx + dy * dy);
+        if (dist < menorDist) {
+            menorDist = dist;
+            idMaisProximo = i;
+        }
+    }
+
+    if (idMaisProximo >= 0 && menorDist < 0.25f) {
+        estimular(idMaisProximo);
+    }
+}
+
 void teclado(unsigned char key, int x, int y) {
     if (jniEnv == nullptr || mainObj == nullptr) return;
 
@@ -617,17 +658,39 @@ void teclado(unsigned char key, int x, int y) {
 }
 
 void mouseClick(int botao, int estado, int x, int y) {
-    if (botao == GLUT_LEFT_BUTTON) {
-        mousePressionado = (estado == GLUT_DOWN);
-        mouseX = x; mouseY = y;
+    if (botao != GLUT_LEFT_BUTTON) return;
+
+    if (estado == GLUT_DOWN) {
+        mousePressionado = true;
+        mouseMoveu = false;
+        mouseX = x;
+        mouseY = y;
+    } else if (estado == GLUT_UP) {
+        mousePressionado = false;
+        if (!mouseMoveu) {
+            int largura = glutGet(GLUT_WINDOW_WIDTH);
+            int altura = glutGet(GLUT_WINDOW_HEIGHT);
+            clicouEmEsfera(x, y, largura, altura);
+        }
     }
 }
 
 void mouseMove(int x, int y) {
     if (!mousePressionado) return;
-    anguloY += (x - mouseX) * 0.5f;
-    anguloX += (y - mouseY) * 0.5f;
-    mouseX = x; mouseY = y;
+
+    int dx = x - mouseX;
+    int dy = y - mouseY;
+
+    if (abs(dx) > 2 || abs(dy) > 2)
+        mouseMoveu = true;
+
+    if (mouseMoveu) {
+        anguloY += dx * 0.5f;
+        anguloX += dy * 0.5f;
+    }
+
+    mouseX = x;
+    mouseY = y;
     glutPostRedisplay();
 }
 
